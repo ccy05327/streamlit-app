@@ -1,6 +1,8 @@
 import pandas as pd
+import streamlit as st
 
 
+@st.cache_data
 def load_samsung_sleep_data(path="data/samsung health sleep combined data.csv"):
     df = pd.read_csv(path)
 

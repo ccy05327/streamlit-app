@@ -1,6 +1,8 @@
 import pandas as pd
+import streamlit as st
 
 
+@st.cache_data
 def load_heart_data(path="data/samsung health heart rate data.csv"):
     try:
         df = pd.read_csv(path)
@@ -17,6 +19,7 @@ def load_heart_data(path="data/samsung health heart rate data.csv"):
         return pd.DataFrame()
 
 
+@st.cache_data
 def load_stress_data(path="data/samsung health stress data.csv"):
     try:
         df = pd.read_csv(path)
