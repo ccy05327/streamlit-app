@@ -3,7 +3,7 @@ import pandas as pd
 
 
 def display_sidebar(df):
-    st.sidebar.header("📅 Filter Sleep Data")
+    st.sidebar.header(" Filter Sleep Data")
 
     # Get date range
     min_date = df["sleep_time"].dt.date.min()

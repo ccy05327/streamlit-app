@@ -23,9 +23,13 @@ def display_samsung_sleep(df: pd.DataFrame):
                 max_value=max_date
             )
         with col2:
-            weekdays = df["weekday"].unique().tolist()
+            weekday_order = ["Monday", "Tuesday", "Wednesday",
+                             "Thursday", "Friday", "Saturday", "Sunday"]
+            present_days = sorted(
+                df["weekday"].dropna().unique(), key=weekday_order.index)
+
             selected_days = st.multiselect(
-                "Weekdays", options=weekdays, default=weekdays)
+                "Weekdays", options=present_days, default=present_days)
 
     # Apply filters
     filtered = df.copy()

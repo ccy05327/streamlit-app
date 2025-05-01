@@ -1,0 +1,7 @@
+[theme]
+base="dark"
+primaryColor="#ffb6c1"            # pastel pink
+backgroundColor="#1e1e2f"         # dark navy background
+secondaryBackgroundColor="#2e2e3f" # dark slate panels
+textColor="#ffffff"
+font="sans serif"
