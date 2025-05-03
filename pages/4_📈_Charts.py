@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 from utils.data_io import load
 from zoneinfo import ZoneInfo
 
-st.set_page_config(page_title="📈 Charts", layout="wide")
 st.title("📈 Sleep Timeline Chart")
 
 # ── Load & filter ──────────────────────────────────────────────────────────
@@ -19,7 +18,7 @@ if df_all.empty:
 # unique real dates (newest first) and slider
 unique_dates = sorted(df_all["start_time"].dt.date.unique(), reverse=True)
 max_days = len(unique_dates)
-days = st.slider("Days to display", 1, max_days, min(30, max_days))
+days = st.slider("Days to display", 1, max_days, min(10, max_days))
 st.markdown(f"**Max days available:** {max_days}")
 dates_shown = set(unique_dates[:days])
 df_sel = df_all[df_all["start_time"].dt.date.isin(dates_shown)]
