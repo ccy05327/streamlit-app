@@ -3,8 +3,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
-from utils import load
-from utils.data_io import DATA_PATH
+from utils.data_io import DATA_PATH, load
 
 tz = ZoneInfo("Asia/Taipei")             # ensure consistency
 st.title("📜 History  &  2025 Gap Filler")
