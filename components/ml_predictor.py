@@ -1,31 +1,73 @@
+# components/ml_predictor.py
 import pandas as pd
-from utils import load
+from datetime import timedelta
+from zoneinfo import ZoneInfo
 from sklearn.neighbors import KNeighborsRegressor
+from utils.data_io import load
+
+tz = ZoneInfo("Asia/Taipei")
 
 
-def next_sleep_forecast(k: int = 3) -> dict:
+def _clean_df():
+    """Return DF without NaNs in start_time, sorted chronologically."""
     df = load()
-    if len(df) < k + 2:
-        return {"error": "Need more data — log a few nights first."}
+    df = df.dropna(subset=["start_time"]).copy()
+    df["start_time"] = pd.to_datetime(df["start_time"])
+    df.sort_values("start_time", inplace=True)
+    return df
 
-    # minutes since midnight → easier regression target
-    t = pd.to_datetime(df["start_time"])
-    minutes = t.dt.hour * 60 + t.dt.minute
 
-    X = minutes[:-1].values.reshape(-1, 1)  # all but last
-    y = minutes[1:]                         # next start times
+def _knn_model(k=3):
+    df = _clean_df()
+    if len(df) < k + 1:
+        return None, df
+    minutes = df["start_time"].dt.hour * 60 + df["start_time"].dt.minute
+    X, y = minutes[:-1].values.reshape(-1, 1), minutes[1:]
+    model = KNeighborsRegressor(n_neighbors=k).fit(X, y)
+    return model, df
 
-    model = KNeighborsRegressor(n_neighbors=k)
-    model.fit(X, y)
 
-    next_minutes = int(model.predict([[minutes.iloc[-1]]])[0]) % (24*60)
-    h, m = divmod(next_minutes, 60)
-    next_time = f"{h:02d}:{m:02d}"
+def _roll_one_step(model, last_start):
+    last_min = last_start.hour * 60 + last_start.minute
+    next_min = int(model.predict([[last_min]])[0]) % (24 * 60)
+    h, m = divmod(next_min, 60)
+    next_start = last_start.normalize().replace(hour=h, minute=m)
+    if next_start <= last_start:
+        next_start += timedelta(days=1)
+    return next_start
 
-    # naïve duration = median of previous durations
+
+def next_sleep_forecast():
+    model, df = _knn_model()
+    if model is None:
+        return {"error": "Need more non-empty rows first."}
+
+    last_start = df["start_time"].iloc[-1]
+    next_start = _roll_one_step(model, last_start)
     duration = df["sleep_duration"].median()
-    end_minutes = (next_minutes + int(duration * 60)) % (24*60)
-    eh, em = divmod(end_minutes, 60)
-    wake_time = f"{eh:02d}:{em:02d}"
+    wake = next_start + timedelta(hours=duration)
 
-    return {"sleep": next_time, "wake": wake_time, "duration": round(duration, 2)}
+    return {
+        "date": next_start.date(),
+        "sleep": next_start.strftime("%H:%M"),
+        "wake":  wake.strftime("%H:%M"),
+        "duration": round(duration, 2),
+    }
+
+
+def forecast_for_date(target_date):
+    model, df = _knn_model()
+    if model is None:
+        return {"error": "Need more non-empty rows first."}
+
+    cur = df["start_time"].iloc[-1]
+    while cur.date() < target_date:
+        cur = _roll_one_step(model, cur)
+    duration = df["sleep_duration"].median()
+    wake = cur + timedelta(hours=duration)
+    return {
+        "date": cur.date(),
+        "sleep": cur.strftime("%H:%M"),
+        "wake":  wake.strftime("%H:%M"),
+        "duration": round(duration, 2),
+    }
