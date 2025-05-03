@@ -1,4 +1,5 @@
 # pages/4_⚙️_Settings.py
+from utils.data_io import load
 import pathlib
 import os
 import io
@@ -34,15 +35,47 @@ st.divider()
 # 2. Download backup                                                 #
 # ------------------------------------------------------------------ #
 st.subheader("📥  Download backup")
-if df.empty:
-    st.info("No rows to download yet.")
-else:
-    buf = io.StringIO()
-    df.to_csv(buf, index=False)
-    st.download_button("Download sleep_log.csv", buf.getvalue(),
-                       file_name="sleep_log.csv", mime="text/csv")
 
-st.divider()
+# 1) Load existing data (tz-naïve local times)
+df = load()
+
+# 2) Define a naïve start & end
+START = pd.Timestamp("2025-01-01")                       # naïve
+END = pd.Timestamp.now(ZoneInfo("Asia/Taipei"))        # tz-aware
+END = END.normalize().tz_localize(None)                # strip tz → naïve
+
+# 3) Build full calendar
+dates = pd.date_range(START, END, freq="D")
+calendar = pd.DataFrame({"date_only": dates})
+
+# 4) Pull in your existing first-per-day rows
+df_exist = df.copy()
+df_exist["date_only"] = df_exist["start_time"].dt.normalize()
+keep = ["date_only", "start_time", "end_time",
+        "physical_recovery", "mental_recovery",
+        "sleep_cycle", "sleep_score", "sleep_duration"]
+df_exist = (
+    df_exist
+    .sort_values("start_time")
+    .drop_duplicates("date_only", keep="first")
+    [keep]
+)
+
+# 5) Merge so gaps stay blank
+template = calendar.merge(df_exist, on="date_only", how="left")
+
+# 6) Format times as HH:MM strings
+for c in ("start_time", "end_time"):
+    template[c] = template[c].dt.strftime("%H:%M").fillna("")
+
+# 7) Offer for download
+csv = template.to_csv(index=False)
+st.download_button(
+    "⬇️ Download 2025-template for Sheets",
+    csv,
+    file_name="sleep_2025_template.csv",
+    mime="text/csv",
+)
 
 # ------------------------------------------------------------------ #
 # 3. Upload / merge backup (password-gated)                          #
